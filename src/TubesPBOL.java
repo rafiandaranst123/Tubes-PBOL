@@ -8,11 +8,13 @@
  * @author Asus
  */
 public class TubesPBOL {
-// tes pbol tubes
+//  tes pbol tubes
+    
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
+        System.out.println("tes");
         // TODO code application logic here
     }
     

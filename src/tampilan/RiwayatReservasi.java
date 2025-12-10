@@ -28,9 +28,9 @@ public class RiwayatReservasi extends JFrame {
 
     private void initComponents() {
         setTitle("Riwayat Reservasi");
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // supaya tidak menutup seluruh app
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(800, 400);
-        setLocationRelativeTo(null); // posisi di tengah layar
+        setLocationRelativeTo(null); 
 
         // Panel judul
         JPanel panelJudul = new JPanel();

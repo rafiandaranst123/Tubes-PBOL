@@ -1,0 +1,363 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
+package service;
+
+import java.sql.*;
+import java.util.Date;
+import service.DBConnection;
+
+/**
+ *
+ * @author ASUS
+ */
+public class ReservasiService {
+
+    public String isMejaAvailable(String mejaName, Date date, String startTime, String endTime) {
+        java.sql.Date sqlDate = new java.sql.Date(date.getTime());
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        String userEmail = util.UserSession.getInstance().getUserEmail();
+
+        // ===============================================
+        // FASE 1: USER LOCK (1 AKUN = 1 RESERVASI AKTIF SAMA SEKALI)
+        // ===============================================
+        // Kita ambil SEMUA KOLOM, karena kita perlu tahu NAMA MEJA yang sudah dipesan.
+        String sqlUserLock = "SELECT meja_name FROM reservations "
+                + "WHERE user_email = ? AND status IN ('PENDING', 'APPROVED')";
+
+        try {
+            conn = DBConnection.getConnection();
+
+            // Pengecekan 1: User Lock
+            pstmt = conn.prepareStatement(sqlUserLock);
+            pstmt.setString(1, userEmail);
+
+            rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                // Jika ada hasilnya, berarti User sudah punya reservasi aktif
+                String conflictingMeja = rs.getString("meja_name");
+                return conflictingMeja; // <-- Mengembalikan nama meja yang sudah dipesan
+            }
+
+            // ===============================================
+            // FASE 2: MEJA LOCK (Cek apakah meja ini sudah dipesan orang lain pada waktu ini)
+            // ===============================================
+            String sqlMejaLock = "SELECT COUNT(*) FROM reservations "
+                    + "WHERE meja_name = ? AND reservasi_date = ? AND status IN ('PENDING', 'APPROVED') "
+                    + "AND (? < end_time) AND (? > start_time)";
+
+            pstmt = conn.prepareStatement(sqlMejaLock);
+
+            pstmt.setString(1, mejaName);
+            pstmt.setDate(2, sqlDate);
+            pstmt.setString(3, startTime);
+            pstmt.setString(4, endTime);
+
+            rs = pstmt.executeQuery();
+
+            if (rs.next() && rs.getInt(1) > 0) {
+                // Meja dipesan orang lain, kita kembalikan nama meja yang konflik
+                return mejaName; // Meja yang konflik adalah meja yang dicoba dipesan
+            }
+
+            return null; // <-- Mengembalikan NULL, artinya Lulus pengecekan (Tersedia)
+
+        } catch (SQLException e) {
+            System.err.println("Error saat cek ketersediaan: " + e.getMessage());
+            return "ERROR_DB"; // Kembalikan string error jika ada masalah DB
+        } finally {
+            try {
+                if (rs != null) {
+                    rs.close();
+                }
+            } catch (Exception e) {
+            }
+            try {
+                if (pstmt != null) {
+                    pstmt.close();
+                }
+            } catch (Exception e) {
+            }
+            DBConnection.closeConnection(conn);
+        }
+    }
+
+    public boolean createReservation(String userEmail, String mejaName, Date date, String startTime, String endTime) {
+
+        // 1. Convert Date ke java.sql.Date untuk SQL
+        java.sql.Date sqlDate = new java.sql.Date(date.getTime());
+
+        String sql = "INSERT INTO reservations (user_email, meja_name, reservasi_date, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, 'PENDING')";
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+
+        try {
+            conn = DBConnection.getConnection();
+            pstmt = conn.prepareStatement(sql);
+
+            pstmt.setString(1, userEmail);
+            pstmt.setString(2, mejaName);
+            pstmt.setDate(3, sqlDate);
+            pstmt.setString(4, startTime); // Format harus 'HH:MM:SS' atau 'HH:MM'
+            pstmt.setString(5, endTime);   // Format harus 'HH:MM:SS' atau 'HH:MM'
+
+            int rowsAffected = pstmt.executeUpdate();
+            return rowsAffected > 0;
+
+        } catch (SQLException e) {
+            System.err.println("Error saat membuat reservasi: " + e.getMessage());
+            // Di sini Anda bisa menambahkan logic untuk cek konflik waktu
+            return false;
+        } finally {
+            try {
+                if (pstmt != null) {
+                    pstmt.close();
+                }
+            } catch (Exception e) {
+            }
+            DBConnection.closeConnection(conn);
+        }
+    }
+
+    public Object[][] getFilteredReservations(String filterMeja, Date filterTanggal) {
+
+        String sql = "SELECT meja_name, reservasi_date, start_time, end_time, user_email, status, id_reservasi "
+                + "FROM reservations WHERE 1=1 ";
+
+        java.util.List<Object> params = new java.util.ArrayList<>();
+
+        // 1. Tambah Filter Meja (DULUAN)
+        if (filterMeja != null && !filterMeja.equals("Semua Meja")) {
+            sql += " AND meja_name = ? ";
+            params.add(filterMeja);
+        }
+
+        // 2. Tambah Filter Tanggal (KEDUA)
+        if (filterTanggal != null) {
+            sql += " AND reservasi_date = ? ";
+            params.add(new java.sql.Date(filterTanggal.getTime()));
+        }
+
+        sql += " ORDER BY reservasi_date DESC, start_time ASC";
+
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        java.util.List<Object[]> data = new java.util.ArrayList<>();
+
+        try {
+            conn = DBConnection.getConnection();
+            pstmt = conn.prepareStatement(sql);
+
+            // ===============================================
+            // BINDING PARAMETER KRITIS: Urutan params harus cocok dengan urutan '?' di SQL
+            // ===============================================
+            for (int i = 0; i < params.size(); i++) {
+                Object param = params.get(i);
+                int paramIndex = i + 1; // Index dimulai dari 1
+
+                if (param instanceof String) {
+                    // Ini pasti filterMeja
+                    pstmt.setString(paramIndex, (String) param);
+                } else if (param instanceof java.sql.Date) {
+                    // Ini pasti filterTanggal
+                    pstmt.setDate(paramIndex, (java.sql.Date) param);
+                }
+            }
+
+            rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                data.add(new Object[]{
+                    rs.getString("meja_name"),
+                    rs.getDate("reservasi_date"),
+                    rs.getTime("start_time"),
+                    rs.getTime("end_time"),
+                    rs.getString("user_email"),
+                    rs.getString("status"),
+                    rs.getInt("id_reservasi")
+                });
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Error saat mengambil data reservasi: " + e.getMessage());
+        } finally {
+            try {
+                if (rs != null) {
+                    rs.close();
+                }
+            } catch (Exception e) {
+            }
+            try {
+                if (pstmt != null) {
+                    pstmt.close();
+                }
+            } catch (Exception e) {
+            }
+            DBConnection.closeConnection(conn);
+        }
+
+        return data.toArray(new Object[data.size()][]);
+    }
+
+    public boolean updateReservationStatus(int idReservasi, String newStatus) {
+        String sql = "UPDATE reservations SET status = ? WHERE id_reservasi = ?";
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+
+        try {
+            conn = DBConnection.getConnection();
+            pstmt = conn.prepareStatement(sql);
+
+            pstmt.setString(1, newStatus);
+            pstmt.setInt(2, idReservasi);
+
+            int rowsAffected = pstmt.executeUpdate();
+            return rowsAffected > 0;
+
+        } catch (SQLException e) {
+            System.err.println("Error saat update status reservasi: " + e.getMessage());
+            return false;
+        } finally {
+            try {
+                if (pstmt != null) {
+                    pstmt.close();
+                }
+            } catch (Exception e) {
+            }
+            DBConnection.closeConnection(conn);
+        }
+    }
+
+    public Object[][] getReservationsByUser(String userEmail) {
+        // Hanya ambil kolom yang dibutuhkan: Meja, Tgl, Jam Mulai, Jam Selesai, Status
+        String sql = "SELECT meja_name, reservasi_date, start_time, end_time, status "
+                + "FROM reservations WHERE user_email = ? "
+                + "ORDER BY reservasi_date DESC, start_time DESC"; // Urutkan dari yang terbaru
+
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        java.util.List<Object[]> data = new java.util.ArrayList<>();
+
+        try {
+            conn = DBConnection.getConnection();
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setString(1, userEmail);
+            rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                data.add(new Object[]{
+                    rs.getString("meja_name"),
+                    rs.getDate("reservasi_date"),
+                    rs.getTime("start_time"),
+                    rs.getTime("end_time"),
+                    rs.getString("status")
+                });
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Error saat mengambil riwayat reservasi: " + e.getMessage());
+            return new Object[0][0]; // Kembalikan array kosong jika gagal
+        } finally {
+            try {
+                if (rs != null) {
+                    rs.close();
+                }
+            } catch (Exception e) {
+            }
+            try {
+                if (pstmt != null) {
+                    pstmt.close();
+                }
+            } catch (Exception e) {
+            }
+            DBConnection.closeConnection(conn);
+        }
+
+        return data.toArray(new Object[data.size()][]);
+    }
+
+    /**
+     * Mengecek dan mengubah status reservasi yang sudah melewati waktu selesai
+     * menjadi 'FINISHED'. Dipanggil secara berkala oleh scheduler.
+     */
+    public void checkAndFinishReservations() {
+
+        // Query SQL: UPDATE status menjadi 'FINISHED'
+        // Kriteria: 
+        // 1. Status saat ini masih PENDING atau APPROVED.
+        // 2. Tanggal reservasi = Hari ini (CURRENT_DATE()).
+        // 3. Waktu selesai (end_time) sudah lewat dari Jam Sekarang (CURRENT_TIME()).
+        String sql = "UPDATE reservations SET status = 'FINISHED' "
+                + "WHERE status IN ('PENDING', 'APPROVED') "
+                + "AND reservasi_date <= CURRENT_DATE() " // Gunakan <= untuk mencakup hari-hari sebelumnya (jika scheduler terlambat jalan)
+                + "AND end_time <= CURRENT_TIME()";
+
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+
+        try {
+            conn = DBConnection.getConnection();
+            pstmt = conn.prepareStatement(sql);
+
+            int rowsUpdated = pstmt.executeUpdate();
+            System.out.println("Status reservasi otomatis selesai: " + rowsUpdated + " baris diperbarui.");
+
+        } catch (SQLException e) {
+            System.err.println("Gagal otomatis menyelesaikan reservasi: " + e.getMessage());
+        } finally {
+            try {
+                if (pstmt != null) {
+                    pstmt.close();
+                }
+            } catch (Exception e) {
+            }
+            DBConnection.closeConnection(conn);
+        }
+    }
+
+    public String getReservationStatus(int idReservasi) {
+        String sql = "SELECT status FROM reservations WHERE id_reservasi = ?";
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DBConnection.getConnection();
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, idReservasi);
+            rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getString("status");
+            }
+            return null; // ID tidak ditemukan
+
+        } catch (SQLException e) {
+            System.err.println("Error saat mengambil status reservasi: " + e.getMessage());
+            return "ERROR_DB"; // Kembalikan string error jika ada masalah DB
+        } finally {
+            // Tutup resource
+            try {
+                if (rs != null) {
+                    rs.close();
+                }
+            } catch (Exception e) {
+            }
+            try {
+                if (pstmt != null) {
+                    pstmt.close();
+                }
+            } catch (Exception e) {
+            }
+            DBConnection.closeConnection(conn);
+        }
+    }
+
+}

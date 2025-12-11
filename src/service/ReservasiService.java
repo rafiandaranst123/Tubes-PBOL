@@ -6,42 +6,94 @@ package service;
 
 import java.sql.*;
 import java.util.Date;
-import service.DBConnection;
 
 /**
- *
+ * Reservasi Service - Layanan untuk mengelola reservasi meja restaurant
+ * 
+ * Fitur Utama:
+ * - Mengecek apakah akun user memiliki reservasi aktif
+ * - Validasi ketersediaan meja berdasarkan tanggal dan waktu
+ * - Membuat reservasi baru dengan status PENDING
+ * - Menghapus reservasi
+ * - Mengambil data reservasi untuk admin dan user
+ * 
+ * Sistem Pengecekan Reservasi (2 Fase):
+ * 
+ * FASE 1 - USER LOCK:
+ * - Mengecek apakah akun user sudah memiliki reservasi aktif
+ * - 1 akun hanya boleh memiliki 1 reservasi aktif (PENDING/APPROVED)
+ * - Mencegah user membuat multiple booking
+ * - Return: nama meja yang sudah direservasi jika user sudah punya reservasi
+ * 
+ * FASE 2 - MEJA LOCK:
+ * - Mengecek apakah meja sudah dipesan user lain pada waktu yang sama
+ * - Validasi overlap waktu reservasi
+ * - Mencegah double booking pada meja yang sama
+ * 
+ * Database Integration:
+ * - Menggunakan DBConnection untuk koneksi MySQL
+ * - Tabel: reservations
+ * - Status: PENDING (menunggu approval), APPROVED (disetujui)
+ * 
  * @author ASUS
+ * @version 1.1
  */
 public class ReservasiService {
 
+    /**
+     * Mengecek apakah meja tersedia untuk direservasi.
+     * 
+     * Method ini melakukan 2 fase pengecekan:
+     * 
+     * FASE 1 - Pengecekan Apakah Akun Memiliki Reservasi:
+     * - Query: SELECT meja_name FROM reservations WHERE user_email = ? AND status IN ('PENDING', 'APPROVED')
+     * - Mengecek apakah user_email (dari UserSession) sudah memiliki reservasi aktif
+     * - Jika user sudah punya reservasi, return nama meja yang sudah direservasi
+     * - Sistem 1 akun = 1 reservasi aktif untuk mencegah spam booking
+     * 
+     * FASE 2 - Pengecekan Ketersediaan Meja:
+     * - Jika user belum punya reservasi, cek apakah meja available pada waktu yang diminta
+     * - Validasi overlap waktu dengan reservasi lain pada meja yang sama
+     * - Cek konflik jadwal dengan user lain
+     * 
+     * @param mejaName Nama meja yang ingin direservasi (contoh: "A1", "B2", "VIP")
+     * @param date Tanggal reservasi
+     * @param startTime Waktu mulai (format: "HH:MM:SS")
+     * @param endTime Waktu selesai (format: "HH:MM:SS")
+     * @return null jika tersedia, nama meja jika konflik, "ERROR_DB" jika ada error database
+     */
     public String isMejaAvailable(String mejaName, Date date, String startTime, String endTime) {
         java.sql.Date sqlDate = new java.sql.Date(date.getTime());
         Connection conn = null;
         PreparedStatement pstmt = null;
         ResultSet rs = null;
 
+        // Ambil email user yang sedang login dari UserSession
         String userEmail = util.UserSession.getInstance().getUserEmail();
 
         // ===============================================
-        // FASE 1: USER LOCK (1 AKUN = 1 RESERVASI AKTIF SAMA SEKALI)
+        // FASE 1: USER LOCK - PENGECEKAN APAKAH AKUN MEMILIKI RESERVASI
         // ===============================================
-        // Kita ambil SEMUA KOLOM, karena kita perlu tahu NAMA MEJA yang sudah dipesan.
+        // Mengecek apakah user ini sudah punya reservasi aktif (PENDING atau APPROVED)
+        // 1 AKUN = 1 RESERVASI AKTIF untuk mencegah multiple booking
+        // ===============================================
         String sqlUserLock = "SELECT meja_name FROM reservations "
                 + "WHERE user_email = ? AND status IN ('PENDING', 'APPROVED')";
 
         try {
             conn = DBConnection.getConnection();
 
-            // Pengecekan 1: User Lock
+            // Pengecekan 1: Apakah User Sudah Memiliki Reservasi Aktif?
             pstmt = conn.prepareStatement(sqlUserLock);
-            pstmt.setString(1, userEmail);
+            pstmt.setString(1, userEmail); // Set parameter user email
 
             rs = pstmt.executeQuery();
 
             if (rs.next()) {
-                // Jika ada hasilnya, berarti User sudah punya reservasi aktif
+                // User sudah punya reservasi aktif!
+                // Ambil nama meja yang sudah direservasi
                 String conflictingMeja = rs.getString("meja_name");
-                return conflictingMeja; // <-- Mengembalikan nama meja yang sudah dipesan
+                return conflictingMeja; // Return nama meja yang sudah dipesan oleh user ini
             }
 
             // ===============================================

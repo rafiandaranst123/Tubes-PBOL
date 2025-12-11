@@ -67,8 +67,30 @@ public class AuthService {
     }
 
     /**
-     * Melakukan verifikasi login.
-     * @return user_level ('user' atau 'admin') jika berhasil, null jika gagal.
+     * Melakukan verifikasi login user dan mendeteksi level akses (user/admin).
+     * 
+     * Proses verifikasi:
+     * 1. Mengambil data user dari database berdasarkan email
+     * 2. Membandingkan password yang diinput dengan hash di database
+     * 3. Mendeteksi level user (user atau admin) dari kolom user_level
+     * 4. Mengembalikan user_level jika login berhasil
+     * 
+     * Koneksi database:
+     * - Menggunakan DBConnection.getConnection() untuk koneksi ke MySQL
+     * - Query: SELECT password, user_level FROM users WHERE email = ?
+     * - PreparedStatement untuk mencegah SQL injection
+     * 
+     * Deteksi User dan Admin:
+     * - Level 'user': User biasa dengan akses terbatas
+     * - Level 'admin': Admin dengan akses penuh ke dashboard admin
+     * 
+     * Security:
+     * - Password diverifikasi dengan BCrypt.checkpw()
+     * - Password tidak pernah disimpan dalam bentuk plain text
+     * 
+     * @param email Email user yang akan login
+     * @param password Password user dalam plain text
+     * @return String 'user' jika user biasa, 'admin' jika admin, null jika login gagal
      */
     public String loginUser(String email, String password) {
         String userLevel = null;
@@ -79,6 +101,7 @@ public class AuthService {
         ResultSet rs = null;
 
         try {
+            // Koneksi ke database menggunakan DBConnection
             conn = DBConnection.getConnection();
             pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, email);
@@ -87,11 +110,12 @@ public class AuthService {
             
             if (rs.next()) {
                 String storedHash = rs.getString("password"); // Ambil hash dari DB
-                String level = rs.getString("user_level"); // Ambil level
+                String level = rs.getString("user_level"); // Ambil level (user/admin)
                 
                 // Verifikasi Password dengan BCrypt
+                // Jika password cocok, simpan level untuk deteksi user/admin
                 if (BCrypt.checkpw(password, storedHash)) {
-                    userLevel = level;
+                    userLevel = level; // Return level untuk menentukan akses
                 }
             }
             
@@ -103,6 +127,6 @@ public class AuthService {
             DBConnection.closeConnection(conn);
         }
         
-        return userLevel;
+        return userLevel; // Return 'user', 'admin', atau null
     }
 }

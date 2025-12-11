@@ -21,8 +21,19 @@ import java.sql.Time;
 import java.util.Calendar;
 
 /**
- *
+ * Admin Reservasi Page - Dashboard admin untuk mengelola reservasi
+ * Fitur:
+ * - Melihat semua data reservasi dalam tabel
+ * - Filter reservasi berdasarkan tanggal
+ * - Menghapus data reservasi
+ * - Refresh data tabel secara real-time
+ * - Integrasi dengan ReservasiService untuk operasi database
+ * 
+ * Tabel menampilkan informasi lengkap:
+ * ID, Username, Nama Meja, Tanggal, Jam Mulai, Jam Selesai, Jumlah Orang
+ * 
  * @author Acer
+ * @version 1.1
  */
 public class AdminReservasi extends JFrame {   // DI SINI DITAMBAH extends JFrame
 

@@ -16,6 +16,18 @@ import javax.swing.table.DefaultTableModel;
 import service.ReservasiService;
 import util.UserSession;
 
+/**
+ * Riwayat Reservasi Page - Halaman untuk melihat history reservasi user
+ * Fitur:
+ * - Menampilkan semua reservasi yang pernah dibuat oleh user yang sedang login
+ * - Tabel dengan kolom: ID, Nama Meja, Tanggal, Jam Mulai, Jam Selesai, Jumlah Orang
+ * - Data diambil berdasarkan username dari UserSession
+ * - Auto-load data saat halaman dibuka
+ * - Interface yang user-friendly dengan layout terstruktur
+ * 
+ * @author Acer
+ * @version 1.1
+ */
 public class RiwayatReservasi extends JFrame {
 
     private JTable tableRiwayat;

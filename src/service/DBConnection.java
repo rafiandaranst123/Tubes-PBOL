@@ -12,8 +12,22 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 /**
- *
+ * Database Connection Manager - Mengelola koneksi ke database MySQL
+ * 
+ * Kelas ini bertanggung jawab untuk:
+ * - Menyediakan koneksi database untuk operasi login dan logout
+ * - Mengelola kredensial database (URL, username, password)
+ * - Menyediakan metode untuk membuka dan menutup koneksi
+ * - Digunakan oleh AuthService untuk autentikasi user
+ * 
+ * Konfigurasi:
+ * - Database: tenoutoften
+ * - Server: localhost:3306
+ * - User: root
+ * - Password: (kosong)
+ * 
  * @author ASUS
+ * @version 1.1
  */
 public class DBConnection {
     private static final String DB_URL = "jdbc:mysql://localhost:3306/tenoutoften"; // Nama DB Anda

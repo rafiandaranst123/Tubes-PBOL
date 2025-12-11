@@ -8,6 +8,24 @@ import java.sql.*;
 import org.mindrot.jbcrypt.BCrypt;
 import service.DBConnection; 
 
+/**
+ * Authentication Service - Layanan autentikasi untuk login dan registrasi
+ * 
+ * Fitur utama:
+ * - Registrasi user baru dengan password hashing (BCrypt)
+ * - Login user dengan verifikasi password
+ * - Validasi kredensial dari database
+ * - Menggunakan DBConnection untuk koneksi database
+ * - Integrasi dengan UserSession untuk menyimpan data login
+ * 
+ * Keamanan:
+ * - Password di-hash menggunakan BCrypt sebelum disimpan
+ * - Validasi input untuk mencegah SQL injection
+ * - Penanganan error untuk duplikasi email
+ * 
+ * @author ASUS
+ * @version 1.1
+ */
 public class AuthService {
 
     public boolean registerUser(String fullName, String email, String password) {

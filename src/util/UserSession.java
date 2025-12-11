@@ -6,8 +6,24 @@ package util;
  */
 
 /**
- *
+ * User Session Manager - Mengelola sesi user yang sedang login
+ * 
+ * Implementasi Singleton Pattern untuk menyimpan data user yang sedang aktif:
+ * - Email user yang login
+ * - Level user (admin/user)
+ * 
+ * Metode penting:
+ * - createSession(email, level): Membuat sesi baru saat login berhasil
+ * - clearSession(): Menghapus sesi saat logout
+ * - getInstance(): Mendapatkan instance sesi yang aktif
+ * 
+ * Penggunaan:
+ * - Login: UserSession.createSession(email, level)
+ * - Logout: UserSession.clearSession()
+ * - Cek user: UserSession.getInstance().getUserEmail()
+ * 
  * @author ASUS
+ * @version 1.1
  */
 public class UserSession {
     // 1. Variabel statis untuk menyimpan instance tunggal

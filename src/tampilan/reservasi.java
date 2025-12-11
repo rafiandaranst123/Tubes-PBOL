@@ -14,8 +14,12 @@ import util.UserSession;
 import tampilan.home; 
 
 /**
- *
+ * Form Reservasi - Halaman untuk melakukan reservasi meja restaurant
+ * Menyediakan fitur pemilihan tanggal, waktu, dan jumlah orang
+ * Terintegrasi dengan ReservasiService untuk validasi dan penyimpanan data
+ * 
  * @author Acer
+ * @version 1.1
  */
 public class reservasi extends javax.swing.JFrame {
 

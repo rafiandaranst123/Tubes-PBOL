@@ -11,8 +11,12 @@ import tampilan.home;
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
 /**
- *
+ * VIP Reservation Page - Halaman reservasi khusus untuk meja VIP
+ * Menyediakan layanan reservasi premium dengan fitur khusus
+ * Menggunakan ReservasiService untuk proses booking
+ * 
  * @author Acer
+ * @version 1.1
  */
 public class vip extends javax.swing.JFrame {
 

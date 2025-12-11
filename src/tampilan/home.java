@@ -9,8 +9,14 @@ import tampilan.vip;
 import tampilan.RiwayatReservasi;
 
 /**
- *
+ * Home Page - Halaman utama aplikasi restaurant
+ * Menampilkan menu navigasi ke berbagai fitur:
+ * - Reservasi meja regular
+ * - Reservasi meja VIP
+ * - Riwayat reservasi pengguna
+ * 
  * @author Acer
+ * @version 1.1
  */
 public class home extends javax.swing.JFrame {
 

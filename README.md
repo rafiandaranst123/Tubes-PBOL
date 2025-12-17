@@ -167,3 +167,15 @@ Aplikasi ini dilengkapi dengan beberapa fitur keamanan untuk melindungi data pen
 ## Tim Pengembang
 
 Proyek ini dibuat sebagai Tugas Besar untuk mata kuliah Pemrograman Berorientasi Objek Lanjut (PBOL).
+
+## Anggota Kelompok
+1. Rohaya Hasibuan (241402030) 
+2. Ahmad Arif Fatahillah (241402036) 
+3. Dhaifina Raiqa Zahira (241402056) 
+4. Jordan Michael Amadeo Hutahean (241402082) 
+5. Rafi Andara Nasution (241402095) 
+6. Nazwa Sahara Hrp (241402126) 
+7. Yeremia Nicolas Purba (241402140) 
+
+BERIKUT MERUPAKAN LINK REPOSITORY GITHUB KELOMPOK 3: 
+https://github.com/rafiandaranst123/Tubes-PBOL.git
